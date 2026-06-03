@@ -9,6 +9,8 @@ import {
 } from "./calendar/tools.js";
 import { MailToolkitHandlersLive } from "./mail/index.js";
 import { MailListEnvelopesTool, MailListFoldersTool, MailReadMessageTool } from "./mail/tools.js";
+import { WeatherToolkitHandlersLive } from "./weather/index.js";
+import { WeatherTodayTool } from "./weather/tools.js";
 
 /**
  * Merged agent toolkits. Register connector tools in {@link AgentToolkit} and handler layers below.
@@ -21,10 +23,12 @@ export const AgentToolkit = Toolkit.make(
   CalendarListEventsTool,
   CalendarQueryEventsTool,
   CalendarCreateEventTool,
+  WeatherTodayTool,
 );
 
 /** Handler layers for all tools in {@link AgentToolkit}. */
-export const AgentToolkitHandlersLive = Layer.merge(
+export const AgentToolkitHandlersLive = Layer.mergeAll(
   MailToolkitHandlersLive,
   CalendarToolkitHandlersLive,
+  WeatherToolkitHandlersLive,
 );

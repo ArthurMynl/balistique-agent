@@ -1,3 +1,6 @@
+import type { CalendarLocalizationRules } from "./calendar-localization.js";
+import { defaultCalendarLocalizationRules } from "./calendar-localization.js";
+
 export type CalendarBriefSettings = {
   readonly briefEnabled: boolean;
   readonly briefTime: string;
@@ -6,6 +9,7 @@ export type CalendarBriefSettings = {
   readonly checkIntervalSeconds: number;
   readonly briefGuide: string;
   readonly includeCalendarNames: ReadonlyArray<string>;
+  readonly localization: CalendarLocalizationRules;
 };
 
 export const defaultCalendarBriefSettings = (): CalendarBriefSettings => ({
@@ -17,9 +21,11 @@ export const defaultCalendarBriefSettings = (): CalendarBriefSettings => ({
   briefGuide: [
     "Write a concise morning brief for Discord (under 1800 characters).",
     "Lead with a one-line overview of how busy the day is.",
+    "When a Weather section is provided, open with a short weather snapshot and any tips (umbrella, UV protection).",
     "List events in chronological order with start times.",
     "Call out conflicts, back-to-back blocks, and large gaps.",
     "Use plain text; no markdown headings.",
   ].join("\n"),
   includeCalendarNames: [],
+  localization: defaultCalendarLocalizationRules(),
 });

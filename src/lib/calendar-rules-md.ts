@@ -32,12 +32,16 @@ type AgentBucket = {
   settings: Record<string, string>;
   briefGuideLines: Array<string>;
   includeCalendars: Array<string>;
+  localizationSettings: Record<string, string>;
+  localizationTitles: Array<string>;
 };
 
 const emptyBucket = (): AgentBucket => ({
   settings: {},
   briefGuideLines: [],
   includeCalendars: [],
+  localizationSettings: {},
+  localizationTitles: [],
 });
 
 const assignLine = (bucket: AgentBucket, section: string, line: string): void => {
@@ -61,6 +65,15 @@ const assignLine = (bucket: AgentBucket, section: string, line: string): void =>
         if (kv) bucket.includeCalendars.push(kv.value);
       }
       return;
+    case "localization": {
+      if (trimmed.startsWith("-")) {
+        bucket.localizationTitles.push(trimmed.replace(/^-\s*/, "").trim());
+        return;
+      }
+      const kv = parseKeyValue(line);
+      if (kv) bucket.localizationSettings[kv.key] = kv.value;
+      return;
+    }
     default:
       return;
   }
@@ -95,6 +108,13 @@ export const parseCalendarRulesMarkdown = (markdown: string): CalendarBriefSetti
       ? bucket.briefGuideLines.join("\n").trim()
       : defaults.briefGuide;
 
+  const locDefaults = defaults.localization;
+  const locSetting = (key: string): string | undefined => bucket.localizationSettings[key];
+  const localizationTitles =
+    bucket.localizationTitles.length > 0
+      ? bucket.localizationTitles
+      : locDefaults.localizationTitles;
+
   return {
     briefEnabled,
     briefTime: setting("briefTime") ?? defaults.briefTime,
@@ -103,5 +123,11 @@ export const parseCalendarRulesMarkdown = (markdown: string): CalendarBriefSetti
     checkIntervalSeconds: Math.max(30, Math.min(checkIntervalSeconds, 3600)),
     briefGuide,
     includeCalendarNames: bucket.includeCalendars.filter((name) => name.length > 0),
+    localization: {
+      defaultCity: locSetting("defaultCity") ?? locDefaults.defaultCity,
+      defaultCountry: locSetting("defaultCountry") ?? locDefaults.defaultCountry,
+      defaultTimeZone: locSetting("defaultTimezone") ?? locDefaults.defaultTimeZone,
+      localizationTitles: localizationTitles.filter((title) => title.length > 0),
+    },
   };
 };

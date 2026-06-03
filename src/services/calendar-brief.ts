@@ -10,12 +10,16 @@ import {
   parseBriefTime,
   zonedDateParts,
 } from "../lib/calendar-context.js";
+import { excludeLocalizationEvents } from "../lib/calendar-localization.js";
+import { formatWeatherBriefSection, weatherInsights } from "../lib/weather-open-meteo.js";
 import { Calendar } from "./calendar.js";
 import { CalendarBriefSentStore } from "./calendar-brief-sent-store.js";
 import { CalendarRulesConfig } from "./calendar-rules-config.js";
 import { DiscordChannelSend } from "./discord-channel-send.js";
 import { DiscordConfig } from "./discord-config.js";
 import { AiLive, generateText } from "./openai-subscription.js";
+import { Weather } from "./weather.js";
+import { WeatherRulesConfig } from "./weather-rules-config.js";
 
 const BriefPlatformLive = Layer.mergeAll(BunServices.layer, BunHttpClient.layer);
 const BriefAiLive = AiLive.pipe(Layer.provide(BriefPlatformLive));
@@ -23,23 +27,31 @@ const BriefAiLive = AiLive.pipe(Layer.provide(BriefPlatformLive));
 const buildBriefPrompt = (
   dateKey: string,
   eventsText: string,
+  weatherText: string,
   guide: string,
   timeZone: string,
-): string =>
-  [
+): string => {
+  const sections = [
     `Compose the daily calendar brief for ${dateKey} (${timeZone}).`,
     "",
     "Events:",
     eventsText,
-    "",
-    "Instructions:",
-    guide,
-  ].join("\n");
+  ];
+
+  if (weatherText.length > 0) {
+    sections.push("", "Weather:", weatherText);
+  }
+
+  sections.push("", "Instructions:", guide);
+  return sections.join("\n");
+};
 
 export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/CalendarBrief", {
   make: Effect.gen(function* () {
     const calendar = yield* Calendar;
     const rules = yield* CalendarRulesConfig;
+    const weatherRules = yield* WeatherRulesConfig;
+    const weather = yield* Weather;
     const store = yield* CalendarBriefSentStore;
     const discord = yield* DiscordConfig;
     const channelSend = yield* DiscordChannelSend;
@@ -64,9 +76,37 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
 
       const events = yield* calendar.listEventsForDay({ timeZone: rules.timezone });
       const filtered = filterEventsByCalendarNames(events, rules.includeCalendarNames);
-      const eventsText = formatEventList(`Today (${dateKey})`, filtered);
+      const forBrief = excludeLocalizationEvents(filtered, rules.localization);
+      const eventsText = formatEventList(`Today (${dateKey})`, forBrief);
 
-      const prompt = buildBriefPrompt(dateKey, eventsText, rules.briefGuide, rules.timezone);
+      const weatherText =
+        weatherRules.enabled && weatherRules.configured
+          ? yield* weather.today({}).pipe(
+              Effect.map((snapshot) => {
+                const insights = weatherInsights({
+                  precipProbabilityMaxPercent: snapshot.precipProbabilityMaxPercent,
+                  precipChanceThresholdPercent: weatherRules.precipChanceThresholdPercent,
+                  uvIndexMax: snapshot.uvIndexMax,
+                  uvHighThreshold: weatherRules.uvHighThreshold,
+                  currentWeatherCode: snapshot.currentWeatherCode,
+                  dailyWeatherCode: snapshot.dailyWeatherCode,
+                });
+                return formatWeatherBriefSection(snapshot, insights);
+              }),
+              Effect.tapError((error) =>
+                Effect.logError(`[calendar] weather for brief failed: ${error.message}`),
+              ),
+              Effect.catch(() => Effect.succeed("")),
+            )
+          : "";
+
+      const prompt = buildBriefPrompt(
+        dateKey,
+        eventsText,
+        weatherText,
+        rules.briefGuide,
+        rules.timezone,
+      );
 
       if (rules.dryRun) {
         yield* Effect.log(`[calendar] brief dry-run for ${dateKey}:\n${eventsText}`);
@@ -110,7 +150,7 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
       if (!sent) return;
 
       yield* store.mark(dateKey);
-      yield* Effect.log(`[calendar] brief sent for ${dateKey} (${filtered.length} events)`);
+      yield* Effect.log(`[calendar] brief sent for ${dateKey} (${forBrief.length} events)`);
     });
 
     const runLoop = Effect.fn("CalendarBrief.runLoop")(function* () {

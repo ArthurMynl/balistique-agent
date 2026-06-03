@@ -68,6 +68,24 @@ export const zonedDateParts = (
 export const isoDateKey = (parts: { year: number; month: number; day: number }): string =>
   `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
 
+/** Whether `dayKey` (YYYY-MM-DD in `timeZone`) falls on this event (incl. multi-day spans). */
+export const eventOccursOnDay = (
+  event: CalendarEvent,
+  dayKey: string,
+  timeZone: string,
+): boolean => {
+  const startKey = isoDateKey(zonedDateParts(event.start, timeZone));
+
+  if (event.allDay) {
+    if (event.end === undefined) return startKey === dayKey;
+    const endKey = isoDateKey(zonedDateParts(event.end, timeZone));
+    return dayKey >= startKey && dayKey < endKey;
+  }
+
+  const endKey = isoDateKey(zonedDateParts(event.end ?? event.start, timeZone));
+  return dayKey >= startKey && dayKey <= endKey;
+};
+
 const isoDateKeyPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Validates `YYYY-MM-DD` and checks the date exists in `timeZone`. */
@@ -115,6 +133,18 @@ export const caldavFetchWindow = (startKey: string, endKey: string): { start: Da
   return {
     start: new Date(startNoon.getTime() - 36 * 60 * 60 * 1000),
     end: new Date(endNoon.getTime() + 36 * 60 * 60 * 1000),
+  };
+};
+
+/** Wide overlap window for one day (vacations starting weeks ago still load from CalDAV). */
+export const dayEventsFetchWindow = (dayKey: string): { start: Date; end: Date } => {
+  const parts = dayKey.split("-").map(Number) as [number, number, number];
+  const noon = new Date(Date.UTC(parts[0]!, parts[1]! - 1, parts[2]!, 12, 0, 0));
+  const lookbackDays = 120;
+  const lookaheadDays = 2;
+  return {
+    start: new Date(noon.getTime() - lookbackDays * 24 * 60 * 60 * 1000),
+    end: new Date(noon.getTime() + lookaheadDays * 24 * 60 * 60 * 1000),
   };
 };
 

@@ -1,6 +1,7 @@
 import type { ConnectorManifest } from "../domain/connector.js";
 import { CalendarToolkit } from "./calendar/index.js";
 import { MailToolkit } from "./mail/index.js";
+import { WeatherToolkit } from "./weather/index.js";
 
 const mailManifest: ConnectorManifest = {
   id: "mail",
@@ -16,10 +17,18 @@ const calendarManifest: ConnectorManifest = {
   tools: Object.keys(CalendarToolkit.tools),
 };
 
+const weatherManifest: ConnectorManifest = {
+  id: "weather",
+  description:
+    "Local weather via Open-Meteo — from today's all-day localization calendar event (default Paris).",
+  tools: Object.keys(WeatherToolkit.tools),
+};
+
 /** Static manifests for all registered connectors (extend when adding connectors). */
 export const connectorManifests: ReadonlyArray<ConnectorManifest> = [
   mailManifest,
   calendarManifest,
+  weatherManifest,
 ];
 
 export const assistantSystemInstructions = (
@@ -38,6 +47,7 @@ export const assistantSystemInstructions = (
     "Use calendar_list_calendars to see calendars.",
     "Use calendar_query_events for schedules (start/end YYYY-MM-DD); calendar_list_events for a single day shortcut.",
     "Use calendar_create_event to add events (YYYY-MM-DD or YYYY-MM-DDTHH:mm in configured timezone).",
+    "When the user asks about weather today or what to wear, call weather_today — uses today's localization calendar event (default Paris).",
     "For general chat without needing live data, answer directly without tools.",
     "",
     "Available connectors:",

@@ -21,6 +21,38 @@ const toJsDate = (value: unknown): Date | undefined => {
 
 const isAllDayEvent = (event: VEvent): boolean => event.datetype === "date";
 
+const structuredLocationTitle = (value: unknown): string | undefined => {
+  if (typeof value !== "object" || value === null) return undefined;
+  const parameters = (value as { params?: unknown }).params;
+  if (typeof parameters !== "object" || parameters === null) return undefined;
+
+  for (const [key, paramValue] of Object.entries(parameters)) {
+    if (key.toLowerCase() !== "x-title") continue;
+    const title = parameterValueToString(paramValue);
+    if (title.length > 0) return title;
+  }
+
+  return undefined;
+};
+
+const locationFromVEvent = (event: VEvent): string | undefined => {
+  const direct = parameterValueToString(event.location);
+  if (direct.length > 0) return direct;
+
+  for (const [key, value] of Object.entries(event)) {
+    const normalized = key.toLowerCase();
+    if (!normalized.includes("location")) continue;
+
+    const title = structuredLocationTitle(value);
+    if (title !== undefined) return title;
+
+    const candidate = parameterValueToString(value);
+    if (candidate.length > 0 && !candidate.toLowerCase().startsWith("geo:")) return candidate;
+  }
+
+  return undefined;
+};
+
 export const veventToCalendarEvent = (
   event: VEvent,
   calendarId: string,
@@ -32,13 +64,7 @@ export const veventToCalendarEvent = (
 
   const summary = parameterValueToString(event.summary);
   const end = toJsDate(event.end);
-  const locationRaw = event.location;
-  const location =
-    locationRaw === undefined
-      ? undefined
-      : parameterValueToString(locationRaw).length > 0
-        ? parameterValueToString(locationRaw)
-        : undefined;
+  const location = locationFromVEvent(event);
 
   return {
     uid,

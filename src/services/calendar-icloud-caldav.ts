@@ -3,7 +3,12 @@ import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
 import { createDAVClient, type DAVCalendar } from "tsdav";
 import { CalendarError, CalendarId, type CalendarInfo } from "../domain/calendar.js";
-import { isoDateKey, zonedDateParts } from "../lib/calendar-context.js";
+import {
+  dayEventsFetchWindow,
+  eventOccursOnDay,
+  isoDateKey,
+  zonedDateParts,
+} from "../lib/calendar-context.js";
 import { parseIcsCalendarEvents } from "../lib/ical-event.js";
 import { buildVEventIcs, newEventUid } from "../lib/ical-create.js";
 import {
@@ -115,12 +120,9 @@ export const CalendarIcloudLive = Layer.effect(
     ) {
       const ref = input.date ?? new Date();
       const dayKey = isoDateKey(zonedDateParts(ref, input.timeZone));
-      const windowStart = new Date(ref.getTime() - 36 * 60 * 60 * 1000);
-      const windowEnd = new Date(ref.getTime() + 36 * 60 * 60 * 1000);
+      const { start: windowStart, end: windowEnd } = dayEventsFetchWindow(dayKey);
       const inWindow = yield* listEventsInRange({ start: windowStart, end: windowEnd });
-      return inWindow.filter(
-        (event) => isoDateKey(zonedDateParts(event.start, input.timeZone)) === dayKey,
-      );
+      return inWindow.filter((event) => eventOccursOnDay(event, dayKey, input.timeZone));
     });
 
     const createEvent = Effect.fn("CalendarIcloud.createEvent")(function* (

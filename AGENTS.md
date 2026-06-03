@@ -67,11 +67,14 @@ src/
     registry.ts               # Manifests + assistant system instructions
     mail/                     # mail_list_* tools (read-only from chat)
     calendar/                 # calendar_* tools (list, query, create from chat)
+    weather/                  # weather_today tool (Open-Meteo)
   lib/                        # Pure utilities (PKCE, mail-rules-md, mail-triage, mail-context)
 mail/
   RULES.md                    # Mailbox triage policy (folders, triage guide, agent settings)
 calendar/
   RULES.md                    # Morning brief schedule, timezone, calendar filter, brief guide
+weather/
+  RULES.md                    # Location, UV/rain thresholds (Open-Meteo, no API key)
   services/
     agent-assistant.ts        # LanguageModel.generateText + connector toolkit
     connector-registry.ts     # Merged toolkit for the assistant
@@ -89,7 +92,11 @@ calendar/
     calendar.ts               # Calendar port (list calendars / events)
     calendar-icloud-caldav.ts # iCloud CalDAV via tsdav
     calendar-rules-config.ts  # Loads calendar/RULES.md
-    calendar-brief.ts         # Proactive Discord morning brief
+    calendar-brief.ts         # Proactive Discord morning brief (includes weather when configured)
+    weather.ts                # Weather port (today snapshot)
+    calendar-localization.ts  # Resolve place/timezone from today's calendar event
+    weather-open-meteo.ts     # Open-Meteo forecast
+    weather-rules-config.ts   # Loads weather/RULES.md (thresholds)
     discord-channel-send.ts   # Outbound Discord REST (brief channel)
 ```
 
@@ -180,9 +187,17 @@ CalDAV via `Calendar` / `CalendarIcloudLive` (tsdav): list calendars and day-sco
 - `DISCORD_BRIEF_CHANNEL_ID` — channel for proactive morning briefs
 - Optional: `CALENDAR_RULES_PATH` (default `calendar/RULES.md`)
 
-**Discord + calendar:** Ask “what’s on my calendar today?” — the assistant uses `calendar_list_calendars`, `calendar_list_events`, and `calendar_query_events`. Ask to schedule something — it uses `calendar_create_event`. **Morning brief:** at `briefTime` in `calendar/RULES.md`, `calendar-brief` fetches today’s events, asks Codex for a short summary, and posts to `DISCORD_BRIEF_CHANNEL_ID` (once per local day). Test loop only: `bun run dev:calendar-brief`.
+**Discord + calendar:** Ask “what’s on my calendar today?” — the assistant uses `calendar_list_calendars`, `calendar_list_events`, and `calendar_query_events`. Ask to schedule something — it uses `calendar_create_event`. **Morning brief:** at `briefTime` in `calendar/RULES.md`, `calendar-brief` fetches today’s events and weather (when `weather/RULES.md` is enabled), asks Codex for a short summary, and posts to `DISCORD_BRIEF_CHANNEL_ID` (once per local day). Test loop only: `bun run dev:calendar-brief`.
 
-**Rules live in [`calendar/RULES.md`](calendar/RULES.md)** — `briefTime`, `timezone`, `briefEnabled`, `dryRun`, optional calendar name filter, and the brief-writing guide.
+**Rules live in [`calendar/RULES.md`](calendar/RULES.md)** — `briefTime`, `timezone`, `briefEnabled`, `dryRun`, optional calendar filter, **Localization** (all-day “where I am” event for weather; default Paris), and the brief guide.
+
+## Weather (Open-Meteo)
+
+Forecast via `Weather` / `WeatherOpenMeteoLive` — no API key. **Location and timezone** come from a **full-day localization event** on today's calendar (see Localization in [`calendar/RULES.md`](calendar/RULES.md)); default **Paris** if none. Geocoding via Open-Meteo returns IANA timezone for that place.
+
+- Optional: `WEATHER_RULES_PATH` (default `weather/RULES.md`) — UV/rain thresholds
+- Optional: `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` in `.env` (coordinate override)
+- **Discord:** `weather_today`. **Morning brief** includes weather; localization event is hidden from the event list.
 
 ### Connectors (agent tools)
 

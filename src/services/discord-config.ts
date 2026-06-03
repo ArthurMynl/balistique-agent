@@ -26,9 +26,14 @@ export class DiscordConfig extends Context.Service<DiscordConfig>()("@app/Discor
       });
     }
 
+    const briefChannelId = yield* Config.string("DISCORD_BRIEF_CHANNEL_ID").pipe(
+      Config.withDefault(""),
+    );
+
     return {
       token,
       guildId,
+      briefChannelId: briefChannelId.trim(),
     } as const;
   }),
 }) {

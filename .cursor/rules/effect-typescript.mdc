@@ -1,0 +1,46 @@
+---
+description: Effect v4 patterns for production-ready TypeScript in this project
+globs: src/**/*.ts
+alwaysApply: false
+---
+
+# Effect (v4)
+
+Read `AGENTS.md` for project conventions. For full patterns: `bun run effect:show <topic>`.
+
+## Core rules
+
+- Boot with `BunRuntime.runMain`; compose layers once at entry, not in business code.
+- Services: `Context.Service` with `@app/Name` tags; methods have `R = never`.
+- Implement layers with `Layer.effect` + `Effect.fn("Service.method")` for tracing.
+- Sequential logic: `Effect.gen` + `yield*`; instrumentation: `.pipe(Effect.timeout, Effect.retry, ...)`.
+- Errors: `Schema.TaggedErrorClass`; union with `Schema.Union`; yield tagged errors directly in gen.
+- Config via Effect Config + Layers, not raw `process.env` in services.
+- IDs: branded types; domain: `Schema.Class`.
+
+## Anti-patterns
+
+```typescript
+// ❌ Scattered provide calls
+const x = yield* foo.pipe(Effect.provide(SomeLayer))
+
+// ✅ Single app layer at entry
+BunRuntime.runMain(program.pipe(Effect.provide(AppLayer)))
+
+// ❌ Untraced anonymous generator
+const load = Effect.gen(function* () { ... })
+
+// ✅ Named for stack traces
+const load = Effect.fn("Users.load")(function* () { ... })
+
+// ❌ Duplicate parameterized layer references
+Layer.provide(Postgres.layer(config))
+Layer.provide(Postgres.layer(config)) // second pool!
+
+// ✅ Module-level constant
+const postgresLayer = Postgres.layer(config)
+```
+
+## Reference
+
+Local Effect v4 source: `~/.local/share/effect-solutions/effect`

@@ -1,7 +1,15 @@
 import { BunRuntime } from "@effect/platform-bun";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import { AppLive, CoreMailLive, DiscordLive, MailAgentLive, PlatformLive } from "./app-layer.js";
+import {
+  AppLive,
+  CalendarBriefLive,
+  CoreMailLive,
+  DiscordLive,
+  MailAgentLive,
+  PlatformLive,
+} from "./app-layer.js";
+import { CalendarBrief } from "./services/calendar-brief.js";
 import { MailAutomation } from "./services/mail-automation.js";
 import { OpenAiCodexAuth } from "./services/openai-codex-auth.js";
 import { DiscordBot } from "./services/discord-bot.js";
@@ -49,10 +57,17 @@ const mailAgentProgram = Effect.gen(function* () {
   return yield* automation.runLoop();
 });
 
+const calendarBriefProgram = Effect.gen(function* () {
+  const brief = yield* CalendarBrief;
+  return yield* brief.runLoop();
+});
+
 const appProgram = Effect.gen(function* () {
-  yield* Effect.log("[app] starting Discord + mail triage");
+  yield* Effect.log("[app] starting Discord + mail triage + calendar brief");
   const automation = yield* MailAutomation;
   yield* automation.runLoop().pipe(Effect.forkDetach);
+  const brief = yield* CalendarBrief;
+  yield* brief.runLoop().pipe(Effect.forkDetach);
   const bot = yield* DiscordBot;
   return yield* bot.run;
 });
@@ -61,13 +76,15 @@ const mode = process.argv.includes("--login")
   ? "login"
   : process.argv.includes("--chat")
     ? "chat"
-    : process.argv.includes("--mail-agent")
-      ? "mail-agent"
-      : process.argv.includes("--mail")
-        ? "mail"
-        : process.argv.includes("--discord-only")
-          ? "discord"
-          : "app";
+    : process.argv.includes("--calendar-brief")
+      ? "calendar-brief"
+      : process.argv.includes("--mail-agent")
+        ? "mail-agent"
+        : process.argv.includes("--mail")
+          ? "mail"
+          : process.argv.includes("--discord-only")
+            ? "discord"
+            : "app";
 
 if (mode === "login") {
   BunRuntime.runMain(loginProgram.pipe(Effect.provide(LoginLive)));
@@ -77,6 +94,8 @@ if (mode === "login") {
   BunRuntime.runMain(mailProgram.pipe(Effect.provide(MailLive)));
 } else if (mode === "mail-agent") {
   BunRuntime.runMain(mailAgentProgram.pipe(Effect.provide(MailAgentLive)));
+} else if (mode === "calendar-brief") {
+  BunRuntime.runMain(calendarBriefProgram.pipe(Effect.provide(CalendarBriefLive)));
 } else if (mode === "discord") {
   BunRuntime.runMain(discordProgram.pipe(Effect.provide(DiscordLive)));
 } else {

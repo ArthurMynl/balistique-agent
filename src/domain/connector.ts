@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema";
 
 /** Registered connector identifiers (extend when adding calendar, notes, etc.). */
-export const ConnectorId = Schema.Literals(["mail"]);
+export const ConnectorId = Schema.Literals(["mail", "calendar"]);
 export type ConnectorId = typeof ConnectorId.Type;
 
 export const ConnectorManifest = Schema.Struct({

@@ -1,9 +1,30 @@
-import { MailToolkit, MailToolkitHandlersLive } from "./mail/index.js";
+import * as Layer from "effect/Layer";
+import { Toolkit } from "effect/unstable/ai";
+import { CalendarToolkitHandlersLive } from "./calendar/index.js";
+import {
+  CalendarCreateEventTool,
+  CalendarListCalendarsTool,
+  CalendarListEventsTool,
+  CalendarQueryEventsTool,
+} from "./calendar/tools.js";
+import { MailToolkitHandlersLive } from "./mail/index.js";
+import { MailListEnvelopesTool, MailListFoldersTool, MailReadMessageTool } from "./mail/tools.js";
 
 /**
- * Merged agent toolkits. Add connectors with `Toolkit.merge(MailToolkit, CalendarToolkit, …)`.
+ * Merged agent toolkits. Register connector tools in {@link AgentToolkit} and handler layers below.
  */
-export const AgentToolkit = MailToolkit;
+export const AgentToolkit = Toolkit.make(
+  MailListFoldersTool,
+  MailListEnvelopesTool,
+  MailReadMessageTool,
+  CalendarListCalendarsTool,
+  CalendarListEventsTool,
+  CalendarQueryEventsTool,
+  CalendarCreateEventTool,
+);
 
 /** Handler layers for all tools in {@link AgentToolkit}. */
-export const AgentToolkitHandlersLive = MailToolkitHandlersLive;
+export const AgentToolkitHandlersLive = Layer.merge(
+  MailToolkitHandlersLive,
+  CalendarToolkitHandlersLive,
+);

@@ -38,6 +38,7 @@ If a tradeoff is required, choose robustness and clear failure modes over shortc
 - **Run (Discord only)**: `bun run dev:discord`
 - **Run (one-shot chat)**: `bun run dev:chat`
 - **Run (mail agent)**: `bun run dev:mail-agent`
+- **Run (calendar brief only)**: `bun run dev:calendar-brief`
 - **OAuth login**: `bun run auth:login`
 - **Typecheck**: `bun run typecheck`
 - **Lint**: `bun run lint` / `bun run lint:fix`
@@ -65,9 +66,12 @@ src/
     agent-toolkit.ts          # Toolkit.merge — register new connectors here
     registry.ts               # Manifests + assistant system instructions
     mail/                     # mail_list_* tools (read-only from chat)
+    calendar/                 # calendar_* tools (list, query, create from chat)
   lib/                        # Pure utilities (PKCE, mail-rules-md, mail-triage, mail-context)
 mail/
   RULES.md                    # Mailbox triage policy (folders, triage guide, agent settings)
+calendar/
+  RULES.md                    # Morning brief schedule, timezone, calendar filter, brief guide
   services/
     agent-assistant.ts        # LanguageModel.generateText + connector toolkit
     connector-registry.ts     # Merged toolkit for the assistant
@@ -82,18 +86,24 @@ mail/
     mail-classifier.ts        # AI JSON triage → MailAction
     mail-processed-store.ts   # Idempotency store on disk
     mail-automation.ts        # Poll cycle orchestrator
+    calendar.ts               # Calendar port (list calendars / events)
+    calendar-icloud-caldav.ts # iCloud CalDAV via tsdav
+    calendar-rules-config.ts  # Loads calendar/RULES.md
+    calendar-brief.ts         # Proactive Discord morning brief
+    discord-channel-send.ts   # Outbound Discord REST (brief channel)
 ```
 
 ### Entry modes (`src/index.ts`)
 
-| Flag             | Mode                                   | Layers          |
-| ---------------- | -------------------------------------- | --------------- |
-| (default)        | Discord + mail triage                  | `AppLive`       |
-| `--discord-only` | Discord only (no background mail loop) | `DiscordLive`   |
-| `--chat`         | One-shot `generateText` smoke test     | `ChatLive`      |
-| `--login`        | Interactive Codex OAuth                | `LoginLive`     |
-| `--mail`         | List recent iCloud INBOX envelopes     | `MailLive`      |
-| `--mail-agent`   | Mail triage only                       | `MailAgentLive` |
+| Flag               | Mode                                   | Layers              |
+| ------------------ | -------------------------------------- | ------------------- |
+| (default)          | Discord + mail triage + calendar brief | `AppLive`           |
+| `--discord-only`   | Discord only (no background loops)     | `DiscordLive`       |
+| `--chat`           | One-shot `generateText` smoke test     | `ChatLive`          |
+| `--login`          | Interactive Codex OAuth                | `LoginLive`         |
+| `--mail`           | List recent iCloud INBOX envelopes     | `MailLive`          |
+| `--mail-agent`     | Mail triage only                       | `MailAgentLive`     |
+| `--calendar-brief` | Calendar morning brief loop only       | `CalendarBriefLive` |
 
 ## Effect Architecture
 
@@ -159,6 +169,20 @@ Smoke test: `bun run dev:mail`
 Long-running triage runs in the background when using `bun run dev` (default). It polls unread INBOX, reads each message, classifies with Codex from subject/body content, and applies IMAP actions. Discord-only: `bun run dev:discord`. Mail-only: `bun run dev:mail-agent`. Requires `bun run auth:login` for AI.
 
 **Discord + mail:** In allowed channels, ask about email (e.g. “what’s unread?”, “summarize Waiting”). The assistant runs an agent loop with **mail connector tools** (`mail_list_folders`, `mail_list_envelopes`, `mail_read_message`) — same idea as OpenClaw `registerTool` plugins or Hermes MCP servers. Chat tools are read-only; background triage still moves mail via `mail-automation`.
+
+## iCloud Calendar
+
+CalDAV via `Calendar` / `CalendarIcloudLive` (tsdav): list calendars and day-scoped events. Reuses the same app-specific password as mail.
+
+- `ICLOUD_IMAP_LOGIN` + `ICLOUD_APP_PASSWORD` (required)
+- Optional: `ICLOUD_EMAIL` or `ICLOUD_CALDAV_LOGIN` (full Apple ID if login is not an email)
+- Optional: `ICLOUD_CALDAV_URL` (default `https://caldav.icloud.com/`)
+- `DISCORD_BRIEF_CHANNEL_ID` — channel for proactive morning briefs
+- Optional: `CALENDAR_RULES_PATH` (default `calendar/RULES.md`)
+
+**Discord + calendar:** Ask “what’s on my calendar today?” — the assistant uses `calendar_list_calendars`, `calendar_list_events`, and `calendar_query_events`. Ask to schedule something — it uses `calendar_create_event`. **Morning brief:** at `briefTime` in `calendar/RULES.md`, `calendar-brief` fetches today’s events, asks Codex for a short summary, and posts to `DISCORD_BRIEF_CHANNEL_ID` (once per local day). Test loop only: `bun run dev:calendar-brief`.
+
+**Rules live in [`calendar/RULES.md`](calendar/RULES.md)** — `briefTime`, `timezone`, `briefEnabled`, `dryRun`, optional calendar name filter, and the brief-writing guide.
 
 ### Connectors (agent tools)
 

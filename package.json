@@ -13,6 +13,7 @@
     "dev:chat": "bun run src/index.ts --chat",
     "dev:mail": "bun run src/index.ts --mail",
     "dev:mail-agent": "bun run src/index.ts --mail-agent",
+    "dev:calendar-brief": "bun run src/index.ts --calendar-brief",
     "auth:login": "bun run src/index.ts --login",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
@@ -29,7 +30,9 @@
     "discord.js": "^14.26.4",
     "effect": "^4.0.0-beta.74",
     "imapflow": "^1.3.4",
-    "mailparser": "^3.9.9"
+    "mailparser": "^3.9.9",
+    "node-ical": "^0.26.1",
+    "tsdav": "^2.2.2"
   },
   "devDependencies": {
     "@effect/language-service": "^0.86.2",

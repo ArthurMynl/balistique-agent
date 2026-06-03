@@ -6,6 +6,8 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production --ignore-scripts
 
 COPY mail/ mail/
+COPY calendar/ calendar/
+COPY weather/ weather/
 COPY src/ src/
 COPY tsconfig.json ./
 

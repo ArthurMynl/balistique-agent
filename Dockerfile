@@ -12,4 +12,6 @@ COPY tsconfig.json ./
 ENV HOME=/data
 ENV BALISTIQUE_STATE_DIR=/data
 
+VOLUME ["/data"]
+
 CMD ["bun", "run", "src/index.ts"]

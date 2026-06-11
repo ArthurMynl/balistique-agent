@@ -19,7 +19,6 @@ import { IcloudMailConfig } from "./services/mail-icloud-config.js";
 import { MailIcloudLive } from "./services/mail-icloud.js";
 import { AiLive } from "./services/openai-subscription.js";
 import { AgentToolkitHandlersLive } from "./connectors/agent-toolkit.js";
-import { CalendarLocalizationLive } from "./services/calendar-localization.js";
 import { WeatherOpenMeteoLive } from "./services/weather-open-meteo.js";
 import { WeatherRulesConfig } from "./services/weather-rules-config.js";
 
@@ -45,23 +44,12 @@ export const CoreCalendarLive = Layer.mergeAll(CalendarRulesConfigLive, Calendar
 
 export const WeatherRulesConfigLive = WeatherRulesConfig.layer.pipe(Layer.provide(PlatformLive));
 
-const CalendarLocalizationImplemented = CalendarLocalizationLive.pipe(
-  Layer.provide(CalendarRulesConfigLive),
-  Layer.provide(CalendarIcloudImplemented),
-);
-
 const WeatherOpenMeteoImplemented = WeatherOpenMeteoLive.pipe(
   Layer.provide(WeatherRulesConfigLive),
-  Layer.provide(CalendarLocalizationImplemented),
 );
 
-/** Calendar localization event + Open-Meteo forecast (weather/RULES.md thresholds). */
-export const CoreWeatherLive = Layer.mergeAll(
-  WeatherRulesConfigLive,
-  CalendarRulesConfigLive,
-  CalendarLocalizationImplemented,
-  WeatherOpenMeteoImplemented,
-);
+/** Open-Meteo forecast for Paris (weather/RULES.md thresholds). */
+export const CoreWeatherLive = Layer.mergeAll(WeatherRulesConfigLive, WeatherOpenMeteoImplemented);
 
 export const ConnectorRegistryLive = ConnectorRegistry.layer.pipe(
   Layer.provide(AgentToolkitHandlersLive),

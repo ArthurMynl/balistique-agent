@@ -19,8 +19,7 @@ const calendarManifest: ConnectorManifest = {
 
 const weatherManifest: ConnectorManifest = {
   id: "weather",
-  description:
-    "Local weather via Open-Meteo — from today's all-day localization calendar event (default Paris).",
+  description: "Local weather via Open-Meteo for Paris (Europe/Paris).",
   tools: Object.keys(WeatherToolkit.tools),
 };
 
@@ -47,7 +46,7 @@ export const assistantSystemInstructions = (
     "Use calendar_list_calendars to see calendars.",
     "Use calendar_query_events for schedules (start/end YYYY-MM-DD); calendar_list_events for a single day shortcut.",
     "Use calendar_create_event to add events (YYYY-MM-DD or YYYY-MM-DDTHH:mm in configured timezone).",
-    "When the user asks about weather today or what to wear, call weather_today — uses today's localization calendar event (default Paris).",
+    "When the user asks about weather today or what to wear, call weather_today — Paris forecast.",
     "For general chat without needing live data, answer directly without tools.",
     "",
     "Available connectors:",

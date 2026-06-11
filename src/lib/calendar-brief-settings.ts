@@ -1,6 +1,3 @@
-import type { CalendarLocalizationRules } from "./calendar-localization.js";
-import { defaultCalendarLocalizationRules } from "./calendar-localization.js";
-
 export type CalendarBriefSettings = {
   readonly briefEnabled: boolean;
   readonly briefTime: string;
@@ -9,7 +6,6 @@ export type CalendarBriefSettings = {
   readonly checkIntervalSeconds: number;
   readonly briefGuide: string;
   readonly includeCalendarNames: ReadonlyArray<string>;
-  readonly localization: CalendarLocalizationRules;
 };
 
 export const defaultCalendarBriefSettings = (): CalendarBriefSettings => ({
@@ -27,5 +23,4 @@ export const defaultCalendarBriefSettings = (): CalendarBriefSettings => ({
     "Use plain text; no markdown headings.",
   ].join("\n"),
   includeCalendarNames: [],
-  localization: defaultCalendarLocalizationRules(),
 });

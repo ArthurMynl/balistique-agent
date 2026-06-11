@@ -3,14 +3,15 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as ManagedRuntime from "effect/ManagedRuntime";
 import { AiAssistantLive } from "../app-layer.js";
+import type { DiscordConversationTurn } from "../domain/discord.js";
 import { makeDiscordClient } from "./discord-gateway.js";
 import { DiscordConfig } from "./discord-config.js";
 import { AgentAssistant } from "./agent-assistant.js";
 
-const replyEffect = (prompt: string) =>
+const replyEffect = (prompt: string, history: ReadonlyArray<DiscordConversationTurn>) =>
   Effect.gen(function* () {
     const assistant = yield* AgentAssistant;
-    return yield* assistant.respond(prompt);
+    return yield* assistant.respond(prompt, history);
   });
 
 export class DiscordBot extends Context.Service<DiscordBot>()("@app/DiscordBot", {
@@ -18,7 +19,8 @@ export class DiscordBot extends Context.Service<DiscordBot>()("@app/DiscordBot",
     Effect.gen(function* () {
       const config = yield* DiscordConfig;
       const runtime = ManagedRuntime.make(AiAssistantLive);
-      const runReply = (prompt: string) => runtime.runPromiseExit(replyEffect(prompt));
+      const runReply = (prompt: string, history: ReadonlyArray<DiscordConversationTurn>) =>
+        runtime.runPromiseExit(replyEffect(prompt, history));
 
       const bot = yield* makeDiscordClient(config, runReply);
       return { ...bot, runtime };

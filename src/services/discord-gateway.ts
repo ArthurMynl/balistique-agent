@@ -10,7 +10,13 @@ import {
   type Message,
   type SendableChannels,
 } from "discord.js";
-import { DiscordError } from "../domain/discord.js";
+import type { DiscordConversationTurn } from "../domain/discord.js";
+import { DiscordError, DiscordHistoryFetchLimit } from "../domain/discord.js";
+import {
+  type DiscordHistoryMessage,
+  formatDiscordUserTurn,
+  messagesToConversationTurns,
+} from "../lib/discord-conversation.js";
 import { makeDiscordThreadName, splitDiscordMessage } from "../lib/discord-message.js";
 import { DiscordConfig, extractPrompt } from "./discord-config.js";
 
@@ -61,9 +67,40 @@ const replyInThread = async (message: Message, threadName: string, text: string)
   await sendText(thread, text);
 };
 
+const toHistoryMessage = (message: Message, botUserId: string): DiscordHistoryMessage => ({
+  id: message.id,
+  authorId: message.author.id,
+  authorDisplayName: message.author.displayName,
+  isBot: message.author.bot,
+  content: message.author.id === botUserId ? message.content : extractPrompt(message, botUserId),
+  createdTimestamp: message.createdTimestamp,
+});
+
+const collectThreadHistory = async (
+  channel: SendableChannels,
+  currentMessageId: string,
+  botUserId: string,
+): Promise<ReadonlyArray<DiscordConversationTurn>> => {
+  if (!channel.isThread()) return [];
+
+  const fetched = await channel.messages.fetch({ limit: DiscordHistoryFetchLimit });
+  let messages = [...fetched.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+  const starter = await channel.fetchStarterMessage().catch(() => null);
+  if (starter !== null && !messages.some((msg) => msg.id === starter.id)) {
+    messages = [starter, ...messages];
+  }
+
+  const historyMessages = messages.map((msg) => toHistoryMessage(msg, botUserId));
+  return messagesToConversationTurns(historyMessages, currentMessageId, botUserId);
+};
+
 export const makeDiscordClient = (
   config: typeof DiscordConfig.Service,
-  runReply: (prompt: string) => Promise<Exit.Exit<string, unknown>>,
+  runReply: (
+    prompt: string,
+    history: ReadonlyArray<DiscordConversationTurn>,
+  ) => Promise<Exit.Exit<string, unknown>>,
 ) =>
   Effect.gen(function* () {
     const client = new Client({
@@ -104,7 +141,15 @@ export const makeDiscordClient = (
 
         await replyChannel.sendTyping();
 
-        const exit = await runReply(prompt);
+        const history = await collectThreadHistory(replyChannel, message.id, botUserId);
+        log(
+          `thread ${replyChannel.id} history: ${history.length} prior turn(s) for message ${message.id}`,
+        );
+
+        const exit = await runReply(
+          formatDiscordUserTurn(message.author.displayName, prompt),
+          history,
+        );
 
         if (Exit.isFailure(exit)) {
           logError(`AI failed for message ${message.id}`, Cause.pretty(exit.cause));

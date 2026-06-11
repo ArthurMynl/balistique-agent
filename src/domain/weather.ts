@@ -1,5 +1,13 @@
 import * as Schema from "effect/Schema";
 
+/** Fixed locale for weather forecasts (Paris). */
+export const PARIS_WEATHER = {
+  label: "Paris, France",
+  timeZone: "Europe/Paris",
+  latitude: 48.8566,
+  longitude: 2.3522,
+} as const;
+
 export const WeatherToday = Schema.Struct({
   dateKey: Schema.String,
   locationLabel: Schema.String,

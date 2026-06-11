@@ -10,7 +10,6 @@ import {
   parseBriefTime,
   zonedDateParts,
 } from "../lib/calendar-context.js";
-import { excludeLocalizationEvents } from "../lib/calendar-localization.js";
 import { formatWeatherBriefSection, weatherInsights } from "../lib/weather-open-meteo.js";
 import { Calendar } from "./calendar.js";
 import { CalendarBriefSentStore } from "./calendar-brief-sent-store.js";
@@ -76,8 +75,7 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
 
       const events = yield* calendar.listEventsForDay({ timeZone: rules.timezone });
       const filtered = filterEventsByCalendarNames(events, rules.includeCalendarNames);
-      const forBrief = excludeLocalizationEvents(filtered, rules.localization);
-      const eventsText = formatEventList(`Today (${dateKey})`, forBrief);
+      const eventsText = formatEventList(`Today (${dateKey})`, filtered);
 
       const weatherText =
         weatherRules.enabled && weatherRules.configured
@@ -150,7 +148,7 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
       if (!sent) return;
 
       yield* store.mark(dateKey);
-      yield* Effect.log(`[calendar] brief sent for ${dateKey} (${forBrief.length} events)`);
+      yield* Effect.log(`[calendar] brief sent for ${dateKey} (${filtered.length} events)`);
     });
 
     const runLoop = Effect.fn("CalendarBrief.runLoop")(function* () {

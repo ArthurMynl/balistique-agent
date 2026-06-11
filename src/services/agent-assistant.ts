@@ -3,6 +3,8 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Prompt from "effect/unstable/ai/Prompt";
 import { assistantSystemInstructions } from "../connectors/registry.js";
+import type { DiscordConversationTurn } from "../domain/discord.js";
+import { buildConversationPrompt } from "../lib/discord-conversation.js";
 import { ConnectorRegistry } from "./connector-registry.js";
 import { codexGenerateText } from "./openai-subscription.js";
 
@@ -25,15 +27,17 @@ export class AgentAssistant extends Context.Service<AgentAssistant>()("@app/Agen
     const registry = yield* ConnectorRegistry;
     const instructions = assistantSystemInstructions(registry.manifests);
 
-    const respond = Effect.fn("AgentAssistant.respond")(function* (prompt: string) {
+    const respond = Effect.fn("AgentAssistant.respond")(function* (
+      prompt: string,
+      history: ReadonlyArray<DiscordConversationTurn> = [],
+    ) {
       const trimmed = prompt.trim();
       if (trimmed.length === 0) return "";
 
+      const conversation = buildConversationPrompt(instructions, history, trimmed);
+
       const response = yield* codexGenerateText({
-        prompt: Prompt.make([
-          { role: "system", content: instructions },
-          { role: "user", content: trimmed },
-        ]),
+        prompt: Prompt.make(conversation),
         toolkit: registry.toolkit,
         toolChoice: "auto",
       }).pipe(

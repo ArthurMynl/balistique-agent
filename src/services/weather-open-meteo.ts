@@ -2,11 +2,10 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
-import { CalendarError } from "../domain/calendar.js";
+import { PARIS_WEATHER } from "../domain/weather.js";
 import { WeatherError } from "../domain/weather.js";
 import { isoDateKey, zonedDateParts } from "../lib/calendar-context.js";
 import { hasEnvCoordinates } from "../lib/weather-locale.js";
-import { CalendarLocalization } from "./calendar-localization.js";
 import { Weather, type WeatherTodayInput } from "./weather.js";
 import { WeatherRulesConfig } from "./weather-rules-config.js";
 
@@ -35,7 +34,6 @@ export const WeatherOpenMeteoLive = Layer.effect(
   Weather,
   Effect.gen(function* () {
     const rules = yield* WeatherRulesConfig;
-    const localization = yield* CalendarLocalization;
     const http = yield* HttpClient.HttpClient;
 
     const today = Effect.fn("Weather.today")(function* (input: WeatherTodayInput) {
@@ -48,34 +46,21 @@ export const WeatherOpenMeteoLive = Layer.effect(
       }
 
       const ref = input.date ?? new Date();
-      const locale = yield* localization
-        .resolveForDay({ date: ref })
-        .pipe(
-          Effect.mapError((error) =>
-            error instanceof CalendarError
-              ? new WeatherError({ reason: "FetchFailed", message: error.message })
-              : error,
-          ),
-        );
-
       const timeZone =
         input.timeZone !== undefined && input.timeZone.trim().length > 0
           ? input.timeZone.trim()
-          : locale.timeZone;
+          : PARIS_WEATHER.timeZone;
 
       const coords = hasEnvCoordinates(rules)
         ? {
             latitude: rules.envLatitude!,
             longitude: rules.envLongitude!,
-            label:
-              locale.fromCalendarEvent || locale.label.length > 0
-                ? `${locale.label} (.env coords)`
-                : `${rules.envLatitude!.toFixed(4)}, ${rules.envLongitude!.toFixed(4)}`,
+            label: `${rules.envLatitude!.toFixed(4)}, ${rules.envLongitude!.toFixed(4)} (.env coords)`,
           }
         : {
-            latitude: locale.latitude,
-            longitude: locale.longitude,
-            label: locale.label,
+            latitude: PARIS_WEATHER.latitude,
+            longitude: PARIS_WEATHER.longitude,
+            label: PARIS_WEATHER.label,
           };
 
       const dateKey = isoDateKey(zonedDateParts(ref, timeZone));

@@ -3,7 +3,7 @@ import type * as Effect from "effect/Effect";
 import type { WeatherError, WeatherToday } from "../domain/weather.js";
 
 export type WeatherTodayInput = {
-  /** When omitted, uses timezone from today's calendar localization event. */
+  /** When omitted, uses Europe/Paris. */
   readonly timeZone?: string | undefined;
   readonly date?: Date | undefined;
 };

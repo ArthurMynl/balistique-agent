@@ -94,8 +94,7 @@ weather/
     calendar-rules-config.ts  # Loads calendar/RULES.md
     calendar-brief.ts         # Proactive Discord morning brief (includes weather when configured)
     weather.ts                # Weather port (today snapshot)
-    calendar-localization.ts  # Resolve place/timezone from today's calendar event
-    weather-open-meteo.ts     # Open-Meteo forecast
+    weather-open-meteo.ts     # Open-Meteo forecast (Paris)
     weather-rules-config.ts   # Loads weather/RULES.md (thresholds)
     discord-channel-send.ts   # Outbound Discord REST (brief channel)
 ```
@@ -189,15 +188,15 @@ CalDAV via `Calendar` / `CalendarIcloudLive` (tsdav): list calendars and day-sco
 
 **Discord + calendar:** Ask “what’s on my calendar today?” — the assistant uses `calendar_list_calendars`, `calendar_list_events`, and `calendar_query_events`. Ask to schedule something — it uses `calendar_create_event`. **Morning brief:** at `briefTime` in `calendar/RULES.md`, `calendar-brief` fetches today’s events and weather (when `weather/RULES.md` is enabled), asks Codex for a short summary, and posts to `DISCORD_BRIEF_CHANNEL_ID` (once per local day). Test loop only: `bun run dev:calendar-brief`.
 
-**Rules live in [`calendar/RULES.md`](calendar/RULES.md)** — `briefTime`, `timezone`, `briefEnabled`, `dryRun`, optional calendar filter, **Localization** (all-day “where I am” event for weather; default Paris), and the brief guide.
+**Rules live in [`calendar/RULES.md`](calendar/RULES.md)** — `briefTime`, `timezone` (default `Europe/Paris`), `briefEnabled`, `dryRun`, optional calendar filter, and the brief guide.
 
 ## Weather (Open-Meteo)
 
-Forecast via `Weather` / `WeatherOpenMeteoLive` — no API key. **Location and timezone** come from a **full-day localization event** on today's calendar (see Localization in [`calendar/RULES.md`](calendar/RULES.md)); default **Paris** if none. Geocoding via Open-Meteo returns IANA timezone for that place.
+Forecast via `Weather` / `WeatherOpenMeteoLive` — no API key. **Location and timezone** are fixed to **Paris** (`Europe/Paris`).
 
 - Optional: `WEATHER_RULES_PATH` (default `weather/RULES.md`) — UV/rain thresholds
 - Optional: `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` in `.env` (coordinate override)
-- **Discord:** `weather_today`. **Morning brief** includes weather; localization event is hidden from the event list.
+- **Discord:** `weather_today`. **Morning brief** includes weather when enabled.
 
 ### Connectors (agent tools)
 

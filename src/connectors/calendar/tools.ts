@@ -30,7 +30,7 @@ export const CalendarQueryEventsTool = Tool.make("calendar_query_events", {
 
 export const CalendarCreateEventTool = Tool.make("calendar_create_event", {
   description:
-    "Create a new event on an iCloud calendar. Times use the agent host's current timezone. Use YYYY-MM-DD for all-day, or YYYY-MM-DDTHH:mm for timed events. Call calendar_list_calendars first if unsure which calendar to use.",
+    "Create a new event on an iCloud calendar. Times use the timezone from calendar/RULES.md. Use YYYY-MM-DD for all-day, or YYYY-MM-DDTHH:mm for timed events. Call calendar_list_calendars first if unsure which calendar to use.",
   parameters: Schema.Struct({
     summary: Schema.String,
     start: Schema.String,

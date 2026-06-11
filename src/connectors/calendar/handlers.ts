@@ -14,7 +14,6 @@ import {
   parseIsoDateKey,
   daysBetweenIsoDateKeys,
   resolveCalendarForCreate,
-  systemTimeZone,
   zonedDateParts,
 } from "../../lib/calendar-context.js";
 import type { IcalLocalDate, IcalLocalDateTime } from "../../lib/ical-create.js";
@@ -64,7 +63,7 @@ export const CalendarToolkitHandlersLive = CalendarToolkit.toLayer(
               .pipe(
                 Effect.map((events) => {
                   const filtered = filterEventsByCalendarNames(events, rules.includeCalendarNames);
-                  return formatEventList(`Events on ${startKey}`, filtered);
+                  return formatEventList(`Events on ${startKey}`, filtered, rules.timezone);
                 }),
                 Effect.mapError((error) => error.message),
               ),
@@ -107,7 +106,7 @@ export const CalendarToolkitHandlersLive = CalendarToolkit.toLayer(
         description?: string | undefined;
       }) =>
         Effect.gen(function* () {
-          const timeZone = systemTimeZone();
+          const timeZone = rules.timezone;
           const summary = params.summary.trim();
           if (summary.length === 0) {
             return yield* Effect.fail("summary is required");

@@ -34,12 +34,26 @@ const shouldHandleMessage = (message: Message, config: typeof DiscordConfig.Serv
   return message.guild.id === config.guildId;
 };
 
+/** Discord clears the typing indicator after ~10s; refresh while waiting on the model. */
+const typingRefreshIntervalMs = 8_000;
+
 const sendText = async (channel: SendableChannels, text: string): Promise<void> => {
   const chunks = splitDiscordMessage(text);
 
   for (const chunk of chunks) {
     await channel.send({ content: chunk, allowedMentions: { parse: [] } });
   }
+};
+
+const startTypingIndicator = (channel: SendableChannels): (() => void) => {
+  const sendTyping = () => {
+    void channel.sendTyping().catch(() => undefined);
+  };
+
+  sendTyping();
+  const interval = setInterval(sendTyping, typingRefreshIntervalMs);
+
+  return () => clearInterval(interval);
 };
 
 const ensureReplyThread = async (
@@ -139,29 +153,33 @@ export const makeDiscordClient = (
           return;
         }
 
-        await replyChannel.sendTyping();
+        const stopTyping = startTypingIndicator(replyChannel);
 
-        const history = await collectThreadHistory(replyChannel, message.id, botUserId);
-        log(
-          `thread ${replyChannel.id} history: ${history.length} prior turn(s) for message ${message.id}`,
-        );
+        try {
+          const history = await collectThreadHistory(replyChannel, message.id, botUserId);
+          log(
+            `thread ${replyChannel.id} history: ${history.length} prior turn(s) for message ${message.id}`,
+          );
 
-        const exit = await runReply(
-          formatDiscordUserTurn(message.author.displayName, prompt),
-          history,
-        );
+          const exit = await runReply(
+            formatDiscordUserTurn(message.author.displayName, prompt),
+            history,
+          );
 
-        if (Exit.isFailure(exit)) {
-          logError(`AI failed for message ${message.id}`, Cause.pretty(exit.cause));
-          await sendText(replyChannel, "Sorry, something went wrong while generating a reply.");
-          return;
+          if (Exit.isFailure(exit)) {
+            logError(`AI failed for message ${message.id}`, Cause.pretty(exit.cause));
+            await sendText(replyChannel, "Sorry, something went wrong while generating a reply.");
+            return;
+          }
+
+          const reply = exit.value;
+          log(
+            `replying in thread ${replyChannel.id} for message ${message.id} (${reply.length} chars)`,
+          );
+          await sendText(replyChannel, reply);
+        } finally {
+          stopTyping();
         }
-
-        const reply = exit.value;
-        log(
-          `replying in thread ${replyChannel.id} for message ${message.id} (${reply.length} chars)`,
-        );
-        await sendText(replyChannel, reply);
       } catch (error) {
         logError(`handler failed for message ${message.id}`, error);
         try {

@@ -4,16 +4,21 @@ import type { IcalLocalDate, IcalLocalDateTime } from "./ical-create.js";
 /** IANA timezone for the machine running the agent (e.g. `Europe/Paris`). */
 export const systemTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-const formatTime = (date: Date, allDay: boolean): string => {
+const formatTime = (date: Date, allDay: boolean, timeZone: string): string => {
   if (allDay) return "all day";
-  return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone,
+  });
 };
 
-const formatEventLine = (event: CalendarEvent): string => {
-  const start = formatTime(event.start, event.allDay);
+const formatEventLine = (event: CalendarEvent, timeZone: string): string => {
+  const start = formatTime(event.start, event.allDay, timeZone);
   const end =
     event.end !== undefined && !event.allDay
-      ? `–${formatTime(event.end, false)}`
+      ? `–${formatTime(event.end, false, timeZone)}`
       : event.allDay
         ? ""
         : "";
@@ -27,9 +32,13 @@ export const formatCalendarList = (calendars: ReadonlyArray<CalendarInfo>): stri
   return calendars.map((cal) => `- ${cal.name} (id: ${cal.id})`).join("\n");
 };
 
-export const formatEventList = (label: string, events: ReadonlyArray<CalendarEvent>): string => {
+export const formatEventList = (
+  label: string,
+  events: ReadonlyArray<CalendarEvent>,
+  timeZone: string,
+): string => {
   if (events.length === 0) return `${label}: no events.`;
-  const lines = events.map((event) => `- ${formatEventLine(event)}`);
+  const lines = events.map((event) => `- ${formatEventLine(event, timeZone)}`);
   return `${label} (${events.length}):\n${lines.join("\n")}`;
 };
 
@@ -160,7 +169,7 @@ export const formatEventQueryResult = (
   const multiDay = startKey !== endKey;
   const lines = events.map((event) => {
     const dayKey = isoDateKey(zonedDateParts(event.start, timeZone));
-    const body = formatEventLine(event);
+    const body = formatEventLine(event, timeZone);
     return multiDay ? `- ${dayKey} ${body}` : `- ${body}`;
   });
   return `${label} (${events.length}):\n${lines.join("\n")}`;
@@ -289,5 +298,5 @@ export const resolveCalendarForCreate = (
 
 export const formatCreatedEvent = (event: CalendarEvent, timeZone: string): string => {
   const dayKey = isoDateKey(zonedDateParts(event.start, timeZone));
-  return `Created event on ${dayKey} (${timeZone}):\n- ${formatEventLine(event)}\nuid: ${event.uid}\ncalendar: ${event.calendarName}`;
+  return `Created event on ${dayKey} (${timeZone}):\n- ${formatEventLine(event, timeZone)}\nuid: ${event.uid}\ncalendar: ${event.calendarName}`;
 };

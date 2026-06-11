@@ -75,7 +75,7 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
 
       const events = yield* calendar.listEventsForDay({ timeZone: rules.timezone });
       const filtered = filterEventsByCalendarNames(events, rules.includeCalendarNames);
-      const eventsText = formatEventList(`Today (${dateKey})`, filtered);
+      const eventsText = formatEventList(`Today (${dateKey})`, filtered, rules.timezone);
 
       const weatherText =
         weatherRules.enabled && weatherRules.configured

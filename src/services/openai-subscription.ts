@@ -13,6 +13,7 @@ import type { LanguageModel as LanguageModelTypes } from "effect/unstable/ai";
 import * as Prompt from "effect/unstable/ai/Prompt";
 import type { AnyPart } from "effect/unstable/ai/Response";
 import { OpenAiCodexResponsesBaseUrl } from "../domain/openai-codex.js";
+import { balistiqueAssistantIdentity, respondInFrenchInstruction } from "../lib/agent-locale.js";
 import { OpenAiCodexAuth } from "./openai-codex-auth.js";
 
 const maxAgentTurns = 8;
@@ -67,7 +68,7 @@ const withCodexHeaders = (accountId: string) =>
 const defaultModel = Config.string("OPENAI_CODEX_MODEL").pipe(Config.withDefault("gpt-5.5"));
 
 const codexModelConfig = {
-  instructions: "You are Balistique, a helpful personal assistant in a private Discord server.",
+  instructions: `${balistiqueAssistantIdentity} ${respondInFrenchInstruction}`,
   store: false,
 } as const;
 

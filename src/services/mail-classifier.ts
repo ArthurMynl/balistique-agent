@@ -10,6 +10,7 @@ import {
   type MailMessage,
   type MailTriageCategory,
 } from "../domain/mail.js";
+import { formatErrorMessage } from "../lib/error-message.js";
 import { extractJsonObject, formatMessageForClassifier } from "../lib/mail-action.js";
 import { categoryToAction, type MailTriageFolders } from "../lib/mail-triage.js";
 import { MailRulesConfig } from "./mail-rules-config.js";
@@ -21,24 +22,24 @@ const ClassifierAiLive = AiLive.pipe(Layer.provide(ClassifierPlatformLive));
 
 const buildClassifierInstructions = (folders: MailTriageFolders, triageGuide: string): string =>
   [
-    "You are an email triage agent for a personal iCloud INBOX. Goal: empty INBOX into the right folders.",
-    "INBOX is unprocessed only — always pick a destination folder; never leave mail in INBOX.",
-    "Classify each message from its subject, body, and context. Do not route by sender address alone.",
-    "Follow the mailbox rules below (from mail/RULES.md).",
+    "Tu es un agent de tri de courriel pour une boîte iCloud INBOX personnelle. Objectif : vider l'INBOX vers les bons dossiers.",
+    "L'INBOX ne contient que le non traité — choisis toujours un dossier de destination ; ne laisse jamais le mail dans l'INBOX.",
+    "Classe chaque message d'après l'objet, le corps et le contexte. Ne trie pas sur l'adresse de l'expéditeur seule.",
+    "Suis les règles de la boîte ci-dessous (mail/RULES.md).",
     "",
     triageGuide,
     "",
-    "Respond with JSON only (no markdown):",
-    '{"category":"Action"|"Waiting"|"ReadLater"|"Notifications"|"Archive","reason":"short explanation"}',
+    "Réponds uniquement en JSON (pas de markdown) :",
+    '{"category":"Action"|"Waiting"|"ReadLater"|"Notifications"|"Archive","reason":"explication courte en français"}',
     "",
-    "Folder mapping:",
+    "Correspondance des dossiers :",
     `- Action → "${folders.action}"`,
     `- Waiting → "${folders.waiting}"`,
     `- ReadLater → "${folders.readLater}"`,
     `- Notifications → "${folders.notifications}"`,
     `- Archive → "${folders.archive}"`,
     "",
-    "Never use delete.",
+    "N'utilise jamais delete.",
   ].join("\n");
 
 export type MailClassification = {
@@ -54,14 +55,14 @@ const applySafetyPolicies = (
   if (action._tag === "Delete" && !rules.allowDelete) {
     return {
       action: categoryToAction("ReadLater", rules.triageFolders),
-      reason: `delete disallowed; read later (${reason})`,
+      reason: `suppression interdite ; lecture différée (${reason})`,
     };
   }
 
   if (action._tag === "Delete" && rules.preferArchiveOverDelete) {
     return {
       action: categoryToAction("Archive", rules.triageFolders),
-      reason: `prefer archive over delete (${reason})`,
+      reason: `archivage préféré à la suppression (${reason})`,
     };
   }
 
@@ -76,7 +77,7 @@ const applySafetyPolicies = (
     if (!allowed.has(action.folder)) {
       return {
         action: categoryToAction("ReadLater", rules.triageFolders),
-        reason: `unknown folder "${action.folder}"; using Read Later`,
+        reason: `dossier inconnu « ${action.folder} » ; lecture différée`,
       };
     }
   }
@@ -101,6 +102,11 @@ export class MailClassifier extends Context.Service<MailClassifier>()("@app/Mail
       rules.triageGuide,
     );
 
+    const fallback = (reason: string): MailClassification => ({
+      action: rules.aiFallbackAction,
+      reason,
+    });
+
     const classify = (message: MailMessage) =>
       Effect.gen(function* () {
         const prompt = [
@@ -115,10 +121,7 @@ export class MailClassifier extends Context.Service<MailClassifier>()("@app/Mail
         );
 
         if (raw.trim().length === 0) {
-          return {
-            action: rules.aiFallbackAction,
-            reason: "classifier timeout or empty response",
-          };
+          return fallback("délai dépassé ou réponse vide du classifieur");
         }
 
         const parsed = yield* Effect.try({
@@ -127,10 +130,7 @@ export class MailClassifier extends Context.Service<MailClassifier>()("@app/Mail
         }).pipe(Effect.catch(() => Effect.succeed(null)));
 
         if (parsed === null) {
-          return {
-            action: rules.aiFallbackAction,
-            reason: "classifier response is not JSON",
-          };
+          return fallback("réponse du classifieur non JSON");
         }
 
         return yield* Schema.decodeUnknownEffect(MailClassifierTriageResponse)(parsed).pipe(
@@ -142,14 +142,15 @@ export class MailClassifier extends Context.Service<MailClassifier>()("@app/Mail
             );
             return applySafetyPolicies(base.action, base.reason, rules);
           }),
-          Effect.catch(() =>
-            Effect.succeed({
-              action: rules.aiFallbackAction,
-              reason: "classifier JSON schema decode failed",
-            }),
-          ),
+          Effect.catch(() => Effect.succeed(fallback("échec du décodage JSON du classifieur"))),
         );
-      }).pipe(Effect.provide(ClassifierAiLive));
+      }).pipe(
+        Effect.provide(ClassifierAiLive),
+        Effect.tapError((error) =>
+          Effect.logError(`[mail] classifier failed: ${formatErrorMessage(error)}`),
+        ),
+        Effect.catch(() => Effect.succeed(fallback("erreur du classifieur"))),
+      );
 
     return { classify } as const;
   }),

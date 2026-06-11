@@ -16,10 +16,10 @@ const failureMessage = (error: unknown): string => {
       ? String((error as { message: unknown }).message)
       : String(error);
   if (message.toLowerCase().includes("timeout")) {
-    return "Sorry, that took too long. Please try again.";
+    return "Désolé, ça a pris trop de temps. Réessaie, s'il te plaît.";
   }
   const short = message.length > 300 ? `${message.slice(0, 300)}…` : message;
-  return `Sorry, something went wrong: ${short}`;
+  return `Désolé, un problème est survenu : ${short}`;
 };
 
 export class AgentAssistant extends Context.Service<AgentAssistant>()("@app/AgentAssistant", {

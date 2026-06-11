@@ -10,6 +10,7 @@ import {
   parseBriefTime,
   zonedDateParts,
 } from "../lib/calendar-context.js";
+import { formatErrorMessage } from "../lib/error-message.js";
 import { formatWeatherBriefSection, weatherInsights } from "../lib/weather-open-meteo.js";
 import { Calendar } from "./calendar.js";
 import { CalendarBriefSentStore } from "./calendar-brief-sent-store.js";
@@ -31,17 +32,17 @@ const buildBriefPrompt = (
   timeZone: string,
 ): string => {
   const sections = [
-    `Compose the daily calendar brief for ${dateKey} (${timeZone}).`,
+    `Rédige le brief calendrier du jour pour le ${dateKey} (${timeZone}).`,
     "",
-    "Events:",
+    "Événements :",
     eventsText,
   ];
 
   if (weatherText.length > 0) {
-    sections.push("", "Weather:", weatherText);
+    sections.push("", "Météo :", weatherText);
   }
 
-  sections.push("", "Instructions:", guide);
+  sections.push("", "Consignes :", guide);
   return sections.join("\n");
 };
 
@@ -120,7 +121,7 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
       }
 
       const aiPrompt = [
-        "You write short, actionable daily calendar briefs for a private Discord channel.",
+        "Tu rédiges des briefs calendrier quotidiens courts et actionnables pour un canal Discord privé. Écris en français.",
         "",
         prompt,
       ].join("\n");
@@ -137,7 +138,7 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
         return;
       }
 
-      const header = `**Daily brief — ${dateKey}**\n\n`;
+      const header = `**Brief du jour — ${dateKey}**\n\n`;
       const sent = yield* channelSend.send(discord.briefChannelId, `${header}${text}`).pipe(
         Effect.as(true),
         Effect.tapError((error) =>
@@ -157,7 +158,12 @@ export class CalendarBrief extends Context.Service<CalendarBrief>()("@app/Calend
       );
       return yield* Effect.forever(
         Effect.gen(function* () {
-          yield* runOnce();
+          yield* runOnce().pipe(
+            Effect.tapError((error) =>
+              Effect.logError(`[calendar] brief check failed: ${formatErrorMessage(error)}`),
+            ),
+            Effect.catch(() => Effect.void),
+          );
           yield* Effect.sleep(`${rules.checkIntervalSeconds} seconds`);
         }),
       );

@@ -149,7 +149,7 @@ export const makeDiscordClient = (
         const replyChannel = await ensureReplyThread(message, threadName);
 
         if (prompt.length === 0) {
-          await sendText(replyChannel, "Hey! Send a question and I'll help.");
+          await sendText(replyChannel, "Salut ! Pose une question et je t'aide.");
           return;
         }
 
@@ -168,7 +168,10 @@ export const makeDiscordClient = (
 
           if (Exit.isFailure(exit)) {
             logError(`AI failed for message ${message.id}`, Cause.pretty(exit.cause));
-            await sendText(replyChannel, "Sorry, something went wrong while generating a reply.");
+            await sendText(
+              replyChannel,
+              "Désolé, un problème est survenu lors de la génération de la réponse.",
+            );
             return;
           }
 
@@ -184,7 +187,7 @@ export const makeDiscordClient = (
         logError(`handler failed for message ${message.id}`, error);
         try {
           const threadName = makeDiscordThreadName("", message.author.displayName);
-          await replyInThread(message, threadName, "Sorry, something went wrong.");
+          await replyInThread(message, threadName, "Désolé, un problème est survenu.");
         } catch (replyError) {
           logError(`could not send error reply for message ${message.id}`, replyError);
         }

@@ -17,9 +17,9 @@ export type DiscordHistoryMessage = {
 };
 
 const boilerplateBotMessages = new Set([
-  "Hey! Send a question and I'll help.",
-  "Sorry, something went wrong while generating a reply.",
-  "Sorry, something went wrong.",
+  "Salut ! Pose une question et je t'aide.",
+  "Désolé, un problème est survenu lors de la génération de la réponse.",
+  "Désolé, un problème est survenu.",
 ]);
 
 export const isDiscordBoilerplateBotMessage = (content: string): boolean =>

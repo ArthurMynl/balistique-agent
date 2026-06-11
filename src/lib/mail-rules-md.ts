@@ -14,12 +14,12 @@ const defaultTriageFolders: MailTriageFolders = {
 };
 
 const defaultTriageGuide = [
-  "INBOX is unprocessed only — empty it into a folder based on message content.",
-  "Action — mail requiring the user to do something (reply, pay, confirm, follow up).",
-  "Waiting — user already acted; ball is in someone else's court.",
-  "Notifications — automated FYI with no task.",
-  "Read later — newsletters and optional reading.",
-  "Archive — clearly done or reference-only with no future task.",
+  "L'INBOX ne contient que le non traité — vide-la vers un dossier selon le contenu du message.",
+  "Action — courriel exigeant une action de l'utilisateur (répondre, payer, confirmer, relancer).",
+  "Waiting — l'utilisateur a déjà agi ; la balle est ailleurs.",
+  "Notifications — FYI automatisé sans tâche.",
+  "Read later — newsletters et lecture optionnelle.",
+  "Archive — clairement terminé ou référence sans tâche future.",
 ].join("\n");
 
 const slug = (heading: string): string =>

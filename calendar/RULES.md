@@ -1,4 +1,4 @@
-# Calendar rules
+# Règles calendrier
 
 ## Agent settings
 
@@ -10,15 +10,15 @@ checkIntervalSeconds: 60
 
 ## Calendars
 
-Leave empty to include all iCloud calendars. Otherwise list exact calendar display names:
+Laisser vide pour inclure tous les calendriers iCloud. Sinon, lister les noms affichés exacts :
 
 - Personnel
 
 ## Brief guide
 
-Write a concise morning brief for Discord (under 1800 characters).
-Lead with a one-line overview of how busy the day is.
-When a Weather section is provided, open with a short weather snapshot and any tips (umbrella, UV protection).
-List events in chronological order with start times.
-Call out conflicts, back-to-back blocks, and large gaps.
-Use plain text; no markdown headings.
+Rédige un brief matinal concis pour Discord (moins de 1800 caractères), en français.
+Commence par une ligne sur le niveau d'activité de la journée.
+Quand une section Météo est fournie, ouvre avec un bref résumé météo et des conseils (parapluie, protection UV).
+Liste les événements par ordre chronologique avec les heures de début.
+Signale les conflits, les enchaînements serrés et les longues plages libres.
+Texte brut uniquement ; pas de titres markdown.

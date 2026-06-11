@@ -1,8 +1,8 @@
-# Mailbox rules
+# Règles de la boîte mail
 
 ## Folders
 
-Map triage roles to exact iCloud mailbox names (must match Mail.app):
+Associe les rôles de tri aux noms exacts des dossiers iCloud (doivent correspondre à Mail.app) :
 
 action: Action
 waiting: Waiting
@@ -12,27 +12,27 @@ archive: Archive
 
 ## Triage guide
 
-**INBOX is unprocessed only.** The agent reads each message (subject, body, headers) and
-classifies it into a folder. Do not rely on sender address alone — use the full content.
+**L'INBOX ne contient que le non traité.** L'agent lit chaque message (objet, corps, en-têtes) et
+le classe dans un dossier. Ne te fie pas à l'adresse de l'expéditeur seule — utilise tout le contenu.
 
-- **Action** — the user must DO something: reply, pay, sign, confirm, book, approve, fix,
-  submit, meet a deadline, answer a question, or follow up. If it would go on a to-do list,
-  it is Action.
-- **Waiting** — the user already acted; the ball is in someone else's court. Examples: "we
-  received your request", application under review, awaiting delivery after the user ordered,
-  thread where the user sent the last reply and no response is required yet. Not for new
-  requests addressed to the user.
-- **Notifications** — automated FYI only (shipping, login alerts, promos, status pings) with
-  no task for the user.
-- **Read later** — optional reading (newsletters, marketing, articles) with no task.
-- **Archive** — clearly done, no future value, or reference-only mail that does not fit
-  Notifications (e.g. old confirmations after the matter is closed).
-- If unsure between Action and Waiting → Action (new work beats "maybe I already handled it").
-- If unsure between Waiting and Notifications → Waiting only when a human or process is
-  explicitly progressing something the user started.
-- If unsure between Read later and Archive → Read later only when the user would genuinely
-  read it; otherwise Archive.
+- **Action** — l'utilisateur doit FAIRE quelque chose : répondre, payer, signer, confirmer, réserver,
+  approuver, corriger, soumettre, respecter une échéance, répondre à une question ou relancer. Si ça
+  irait sur une liste de tâches, c'est Action.
+- **Waiting** — l'utilisateur a déjà agi ; la balle est dans le camp de quelqu'un d'autre. Exemples :
+  « nous avons bien reçu votre demande », dossier en cours d'examen, livraison en attente après
+  commande, fil où l'utilisateur a envoyé le dernier message et aucune réponse n'est requise pour
+  l'instant. Pas pour les nouvelles demandes adressées à l'utilisateur.
+- **Notifications** — FYI automatisé uniquement (livraison, alertes de connexion, promos, statuts)
+  sans tâche pour l'utilisateur.
+- **Read later** — lecture optionnelle (newsletters, marketing, articles) sans tâche.
+- **Archive** — clairement terminé, sans valeur future, ou référence seule qui ne rentre pas dans
+  Notifications (ex. anciennes confirmations une fois le dossier clos).
+- En cas de doute entre Action et Waiting → Action (nouveau travail avant « peut-être déjà traité »).
+- En cas de doute entre Waiting et Notifications → Waiting seulement si un humain ou un processus
+  fait explicitement avancer quelque chose que l'utilisateur a initié.
+- En cas de doute entre Read later et Archive → Read later seulement si l'utilisateur lirait
+  vraiment ; sinon Archive.
 
 ## Special rules
 
-- All the squarespace mails should be archived.
+- Tous les mails Squarespace doivent être archivés.

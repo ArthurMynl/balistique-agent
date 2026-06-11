@@ -3,13 +3,13 @@ import { Tool } from "effect/unstable/ai";
 
 export const MailListFoldersTool = Tool.make("mail_list_folders", {
   description:
-    "List configured iCloud mailbox folder names (INBOX and triage folders: Action, Waiting, Read later, Notifications, Archive).",
+    "Liste les dossiers iCloud configurés (INBOX et dossiers de tri : Action, Waiting, Read Later, Notifications, Archive).",
   success: Schema.String,
 }).annotate(Tool.Readonly, true);
 
 export const MailListEnvelopesTool = Tool.make("mail_list_envelopes", {
   description:
-    "List recent email envelopes in a mailbox folder. Returns UID, date, from, subject, and unread flag. Use before mail_read_message when you need full body text.",
+    "Liste les enveloppes récentes d'un dossier. Retourne UID, date, expéditeur, objet et indicateur non lu. À utiliser avant mail_read_message pour le corps complet.",
   parameters: Schema.Struct({
     folder: Schema.String,
     limit: Schema.optionalKey(Schema.Number),
@@ -20,7 +20,8 @@ export const MailListEnvelopesTool = Tool.make("mail_list_envelopes", {
 }).annotate(Tool.Readonly, true);
 
 export const MailReadMessageTool = Tool.make("mail_read_message", {
-  description: "Read one email by UID in a folder, including plain-text body when available.",
+  description:
+    "Lit un courriel par UID dans un dossier, y compris le corps en texte brut si disponible.",
   parameters: Schema.Struct({
     folder: Schema.String,
     uid: Schema.Number,

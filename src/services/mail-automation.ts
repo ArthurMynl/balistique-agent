@@ -1,7 +1,8 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import type { MailAction } from "../domain/mail.js";
+import type { MailEnvelope } from "../domain/mail.js";
+import { formatErrorMessage } from "../lib/error-message.js";
 import { mailActionTag } from "../lib/mail-action.js";
 import { MailClassifier } from "./mail-classifier.js";
 import { MailProcessedStore } from "./mail-processed-store.js";
@@ -17,8 +18,56 @@ export class MailAutomation extends Context.Service<MailAutomation>()("@app/Mail
     const store = yield* MailProcessedStore;
     const classifier = yield* MailClassifier;
 
+    const processEnvelope = Effect.fn("MailAutomation.processEnvelope")(function* (
+      folder: string,
+      envelope: MailEnvelope,
+    ) {
+      const alreadyDone = yield* store.has(folder, envelope.uid, undefined);
+      if (alreadyDone) return "skipped" as const;
+
+      if (!rulesConfig.aiEnabled) {
+        yield* Effect.log(
+          `[mail] UID ${envelope.uid} leave — AI disabled (from: ${envelope.from})`,
+        );
+        return "left" as const;
+      }
+
+      const message = yield* mail.readMessage({ uid: envelope.uid, folder });
+      const messageId = message.messageId;
+
+      if (yield* store.has(folder, envelope.uid, messageId)) return "skipped" as const;
+
+      const { action, reason } = yield* classifier.classify(message);
+
+      if (action._tag === "Leave") {
+        yield* Effect.log(`[mail] UID ${envelope.uid} leave — ${reason} (from: ${envelope.from})`);
+        return "left" as const;
+      }
+
+      yield* Effect.log(
+        `[mail] UID ${envelope.uid} ${mailActionTag(action)} — ${reason} (from: ${envelope.from}, subject: ${envelope.subject})${rulesConfig.dryRun ? " [dry-run]" : ""}`,
+      );
+
+      if (!rulesConfig.dryRun) {
+        yield* mail.applyAction({ uid: envelope.uid, folder, action });
+      }
+
+      yield* store.mark({
+        messageId,
+        folder,
+        uid: envelope.uid,
+        actionTag: mailActionTag(action),
+        reason,
+        processedAt: new Date().toISOString(),
+        dryRun: rulesConfig.dryRun,
+      });
+      return "processed" as const;
+    });
+
     const runCycle = Effect.fn("MailAutomation.runCycle")(function* () {
       const folder = icloud.folder;
+      yield* Effect.log(`[mail] cycle start — folder ${folder}`);
+
       const envelopes = yield* mail.listEnvelopes({
         folder,
         limit: rulesConfig.batchSize,
@@ -33,68 +82,27 @@ export class MailAutomation extends Context.Service<MailAutomation>()("@app/Mail
       for (const envelope of envelopes) {
         if (processed >= rulesConfig.maxActionsPerCycle) break;
 
-        const alreadyDone = yield* store.has(folder, envelope.uid, undefined);
-        if (alreadyDone) {
-          skipped += 1;
-          continue;
-        }
-
-        if (!rulesConfig.aiEnabled) {
-          left += 1;
-          yield* Effect.log(
-            `[mail] UID ${envelope.uid} leave — AI disabled (from: ${envelope.from})`,
-          );
-          continue;
-        }
-
-        const message = yield* mail.readMessage({ uid: envelope.uid, folder });
-        const messageId = message.messageId;
-
-        if (yield* store.has(folder, envelope.uid, messageId)) {
-          skipped += 1;
-          continue;
-        }
-
-        const classified = yield* classifier.classify(message);
-        const action: MailAction = classified.action;
-        const reason = classified.reason;
-
-        if (action._tag === "Leave") {
-          left += 1;
-          yield* Effect.log(
-            `[mail] UID ${envelope.uid} leave — ${reason} (from: ${envelope.from})`,
-          );
-          continue;
-        }
-
-        yield* Effect.log(
-          `[mail] UID ${envelope.uid} ${mailActionTag(action)} — ${reason} (from: ${envelope.from}, subject: ${envelope.subject})${rulesConfig.dryRun ? " [dry-run]" : ""}`,
+        const outcome = yield* processEnvelope(folder, envelope).pipe(
+          Effect.tapError((error) =>
+            Effect.logError(`[mail] UID ${envelope.uid} failed: ${formatErrorMessage(error)}`),
+          ),
+          Effect.catch(() => Effect.succeed("error" as const)),
         );
 
-        if (!rulesConfig.dryRun) {
-          const applied = yield* mail.applyAction({ uid: envelope.uid, folder, action }).pipe(
-            Effect.as(true),
-            Effect.tapError((error) =>
-              Effect.logError(`[mail] action failed for UID ${envelope.uid}: ${error.message}`),
-            ),
-            Effect.catch(() => Effect.succeed(false)),
-          );
-          if (!applied) {
+        switch (outcome) {
+          case "processed":
+            processed += 1;
+            break;
+          case "skipped":
+            skipped += 1;
+            break;
+          case "left":
+            left += 1;
+            break;
+          case "error":
             errors += 1;
-            continue;
-          }
+            break;
         }
-
-        yield* store.mark({
-          messageId,
-          folder,
-          uid: envelope.uid,
-          actionTag: mailActionTag(action),
-          reason,
-          processedAt: new Date().toISOString(),
-          dryRun: rulesConfig.dryRun,
-        });
-        processed += 1;
       }
 
       yield* Effect.log(
@@ -108,7 +116,12 @@ export class MailAutomation extends Context.Service<MailAutomation>()("@app/Mail
       );
       return yield* Effect.forever(
         Effect.gen(function* () {
-          yield* runCycle();
+          yield* runCycle().pipe(
+            Effect.tapError((error) =>
+              Effect.logError(`[mail] cycle failed: ${formatErrorMessage(error)}`),
+            ),
+            Effect.catch(() => Effect.void),
+          );
           yield* Effect.sleep(`${rulesConfig.pollIntervalSeconds} seconds`);
         }),
       );

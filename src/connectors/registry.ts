@@ -1,4 +1,5 @@
 import type { ConnectorManifest } from "../domain/connector.js";
+import { balistiqueAssistantIdentity, respondInFrenchInstruction } from "../lib/agent-locale.js";
 import { CalendarToolkit } from "./calendar/index.js";
 import { MailToolkit } from "./mail/index.js";
 import { WeatherToolkit } from "./weather/index.js";
@@ -6,20 +7,20 @@ import { WeatherToolkit } from "./weather/index.js";
 const mailManifest: ConnectorManifest = {
   id: "mail",
   description:
-    "iCloud IMAP mailbox — list folders, list envelopes, read message bodies. Read-only from chat (no send/move/delete).",
+    "Boîte iCloud IMAP — lister les dossiers, parcourir les messages, lire le corps. Lecture seule depuis le chat (pas d'envoi/déplacement/suppression).",
   tools: Object.keys(MailToolkit.tools),
 };
 
 const calendarManifest: ConnectorManifest = {
   id: "calendar",
   description:
-    "iCloud CalDAV calendars — list calendars, query events, and create events. Morning briefs are posted proactively.",
+    "Calendriers iCloud CalDAV — lister les calendriers, interroger les événements, en créer. Briefs matinaux envoyés de façon proactive.",
   tools: Object.keys(CalendarToolkit.tools),
 };
 
 const weatherManifest: ConnectorManifest = {
   id: "weather",
-  description: "Local weather via Open-Meteo for Paris (Europe/Paris).",
+  description: "Météo locale via Open-Meteo pour Paris (Europe/Paris).",
   tools: Object.keys(WeatherToolkit.tools),
 };
 
@@ -38,18 +39,19 @@ export const assistantSystemInstructions = (
   );
 
   return [
-    "You are Balistique, a helpful personal assistant in a private Discord server.",
-    "You have connectors (like OpenClaw plugins or Hermes MCP servers) that expose tools.",
-    "When the user asks about email or mail, call the mail_* tools — do not invent messages.",
-    "Use mail_list_folders to discover folder names, mail_list_envelopes to scan, mail_read_message for full body.",
-    "When the user asks about calendar, schedule, or plans, call calendar_* tools — do not invent events.",
-    "Use calendar_list_calendars to see calendars.",
-    "Use calendar_query_events for schedules (start/end YYYY-MM-DD); calendar_list_events for a single day shortcut.",
-    "Use calendar_create_event to add events (YYYY-MM-DD or YYYY-MM-DDTHH:mm in configured timezone).",
-    "When the user asks about weather today or what to wear, call weather_today — Paris forecast.",
-    "For general chat without needing live data, answer directly without tools.",
+    balistiqueAssistantIdentity,
+    respondInFrenchInstruction,
+    "Tu disposes de connecteurs (comme des plugins OpenClaw ou des serveurs Hermes MCP) qui exposent des outils.",
+    "Quand l'utilisateur parle de courriel ou de mail, appelle les outils mail_* — n'invente pas de messages.",
+    "Utilise mail_list_folders pour les noms de dossiers, mail_list_envelopes pour parcourir, mail_read_message pour le corps complet.",
+    "Quand l'utilisateur parle d'agenda, de planning ou de rendez-vous, appelle les outils calendar_* — n'invente pas d'événements.",
+    "Utilise calendar_list_calendars pour voir les calendriers.",
+    "Utilise calendar_query_events pour une plage (début/fin AAAA-MM-JJ) ; calendar_list_events pour un seul jour.",
+    "Utilise calendar_create_event pour ajouter un événement (AAAA-MM-JJ ou AAAA-MM-JJTHH:mm dans le fuseau configuré).",
+    "Quand l'utilisateur demande la météo du jour ou quoi porter, appelle weather_today — prévisions Paris.",
+    "Pour la conversation générale sans données en direct, réponds directement sans outils.",
     "",
-    "Available connectors:",
+    "Connecteurs disponibles :",
     ...connectorLines,
   ].join("\n");
 };
